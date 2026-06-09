@@ -1,0 +1,60 @@
+version: "3"
+
+vars:
+  APP_NAME: misato
+  MAIN_PATH: cmd/misato/main.go
+  BIN_DIR: bin
+
+tasks:
+  default:
+    desc: "Builds the application for your current OS"
+    cmds:
+      - task: build
+
+  build:
+    desc: "Compiles the Go code into an executable"
+    cmds:
+      - echo "Building {{.APP_NAME}}..."
+      - go build -o {{.BIN_DIR}}/{{.APP_NAME}} {{.MAIN_PATH}}
+
+  run:
+    desc: "Runs the Go application directly"
+    cmds:
+      - echo "Running {{.APP_NAME}}..."
+      - go run {{.MAIN_PATH}}
+
+  build-linux:
+    desc: "Cross-compiles a Linux AMD64 binary"
+    env:
+      GOOS: linux
+      GOARCH: amd64
+    cmds:
+      - echo "Building for Linux..."
+      - go build -o {{.BIN_DIR}}/{{.APP_NAME}}-linux {{.MAIN_PATH}}
+
+  build-windows:
+    desc: "Cross-compiles a Windows executable"
+    env:
+      GOOS: windows
+      GOARCH: amd64
+    cmds:
+      - echo "Building for Windows..."
+      - go build -o {{.BIN_DIR}}/{{.APP_NAME}}.exe {{.MAIN_PATH}}
+
+  fmt:
+    desc: "Formats all Go code"
+    cmds:
+      - echo "Formatting code..."
+      - go fmt ./...
+
+  vet:
+    desc: "Runs Go vet to catch bugs"
+    cmds:
+      - echo "Vetting code..."
+      - go vet ./...
+
+  clean:
+    desc: "Deletes the compiled binaries"
+    cmds:
+      - echo "Cleaning up..."
+      - rm -rf {{.BIN_DIR}}
