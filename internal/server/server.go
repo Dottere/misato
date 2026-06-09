@@ -8,6 +8,7 @@ import (
 
 func Start(port int) {
 
+	mux := http.NewServeMux()
 	/*
 		Vedd fel ide a végpontokat dinamikusan betöltődnek!
 
@@ -19,10 +20,10 @@ func Start(port int) {
 
 	for path, handler := range endpoints {
 
-		http.HandleFunc(path, handler)
+		mux.HandleFunc(path, handler)
 	}
 
 	fmt.Printf("Server open on port %d...", port)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), mux))
 }
