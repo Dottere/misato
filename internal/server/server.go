@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"log"
-	"misato/internal/cbz"
 	"net/http"
 )
 
@@ -27,15 +26,4 @@ func Start(port int) {
 	fmt.Printf("Server open on port %d...\n", port)
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), mux))
-}
-
-func OpenCBZ(name string) {
-	Cbz, err := cbz.OpenCbz(name)
-
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-
-	fmt.Printf("Cbz: %v\n", Cbz)
 }

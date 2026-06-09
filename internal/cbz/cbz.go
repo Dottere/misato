@@ -2,10 +2,10 @@ package cbz
 
 import (
 	"archive/zip"
-	"path/filepath"
-	"net/url"
 	"io"
 	"net/http"
+	"net/url"
+	"path/filepath"
 	"strings"
 )
 
@@ -13,9 +13,9 @@ type Cbz struct {
 	handle *zip.ReadCloser
 	// each index is a page number, each value is an index of an image
 	// representing a page in the handle.File slice
-	fileIndicesToPages []uint
-	UrlPath string
-	Title string
+	FileIndicesToPages []uint
+	UrlPath            string
+	Title              string
 }
 
 func detectFileMimeType(f *zip.File, buf []byte) (string, error) {
@@ -36,7 +36,7 @@ func detectFileMimeType(f *zip.File, buf []byte) (string, error) {
 func pathToUrl(path string) string {
 	basename := filepath.Base(path)
 	ext := filepath.Ext(basename)
-	return url.PathEscape(strings.TrimSuffix(base, ext))
+	return url.PathEscape(strings.TrimSuffix(basename, ext))
 }
 
 func OpenCbz(name string) (Cbz, error) {
@@ -48,9 +48,9 @@ func OpenCbz(name string) (Cbz, error) {
 	cbz := Cbz{
 		handle: r,
 		// preallocate as many mappings as there are files
-		fileIndicesToPages: make([]uint, len(r.File)),
-		UrlPath: pathToUrl(name),
-		Title: name,
+		FileIndicesToPages: make([]uint, len(r.File)),
+		UrlPath:            pathToUrl(name),
+		Title:              name,
 	}
 
 	const MAX_BYTES_TO_READ uint = 512
@@ -64,12 +64,12 @@ func OpenCbz(name string) (Cbz, error) {
 			return Cbz{}, err
 		}
 		if strings.HasPrefix(mime, "image/") {
-			cbz.fileIndicesToPages[nImages] = uint(i)
+			cbz.FileIndicesToPages[nImages] = uint(i)
 			nImages = nImages + 1
 		}
 	}
 
 	// shrink slice of mappings
-	cbz.fileIndicesToPages = cbz.fileIndicesToPages[:nImages]
+	cbz.FileIndicesToPages = cbz.FileIndicesToPages[:nImages]
 	return cbz, nil
 }
