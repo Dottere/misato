@@ -2,6 +2,8 @@ package cbz
 
 import (
 	"archive/zip"
+	"path/filepath"
+	"net/url"
 	"io"
 	"net/http"
 	"strings"
@@ -12,6 +14,8 @@ type Cbz struct {
 	// each index is a page number, each value is an index of an image
 	// representing a page in the handle.File slice
 	fileIndicesToPages []uint
+	UrlPath string
+	Title string
 }
 
 func detectFileMimeType(f *zip.File, buf []byte) (string, error) {
@@ -29,6 +33,12 @@ func detectFileMimeType(f *zip.File, buf []byte) (string, error) {
 	return http.DetectContentType(buf[:n]), nil
 }
 
+func pathToUrl(path string) string {
+	basename := filepath.Base(path)
+	ext := filepath.Ext(basename)
+	return url.PathEscape(strings.TrimSuffix(base, ext))
+}
+
 func OpenCbz(name string) (Cbz, error) {
 	r, err := zip.OpenReader(name)
 	if err != nil {
@@ -39,6 +49,8 @@ func OpenCbz(name string) (Cbz, error) {
 		handle: r,
 		// preallocate as many mappings as there are files
 		fileIndicesToPages: make([]uint, len(r.File)),
+		UrlPath: pathToUrl(name),
+		Title: name,
 	}
 
 	const MAX_BYTES_TO_READ uint = 512
