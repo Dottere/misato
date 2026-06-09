@@ -5,5 +5,6 @@ import (
 )
 
 func main() {
+	server.OpenCBZ("files\\test.cbz")
 	server.Start(8080)
 }

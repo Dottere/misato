@@ -6,6 +6,7 @@ import (
 )
 
 func serveMainPage(w http.ResponseWriter, r *http.Request) {
+	path := filepath.Join("web", "src", "index.html")
 
-	http.ServeFile(w, r, filepath.Join("web", "src", "index.html"))
+	handleFileServing(path, w, r)
 }
