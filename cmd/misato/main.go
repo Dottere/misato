@@ -1,12 +1,7 @@
 package main
 
-import (
-	"fmt"
-	"misato/internal/config"
-)
+import "misato/internal/server"
 
 func main() {
-	fmt.Println("Hello, World!")
-
-	config.Test()
+	server.Start(8080)
 }
