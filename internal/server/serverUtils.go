@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func isFilePathValid(path string) bool {
@@ -14,12 +15,17 @@ func isFilePathValid(path string) bool {
 	return true
 }
 
-func handleFileServing(path string, w http.ResponseWriter, r *http.Request) {
+func logToCLI(path string, r *http.Request) {
+
+	request_ip_and_port := strings.Split(r.RemoteAddr, ":")
+
+	request_ip := request_ip_and_port[0]
+	// request_port := request_ip_and_port[1]
+
 	if isFilePathValid(path) {
-		http.ServeFile(w, r, path)
-		fmt.Printf("[200] OK | %s - %s", r.Method, path)
+
+		fmt.Printf("[200] OK | %s - %s (%s)\n", r.Method, path, request_ip)
 	} else {
-		http.NotFound(w, r)
-		fmt.Printf("[404] File not found | %s - %s", r.Method, path)
+		fmt.Printf("[404] File not found | %s - %s (%s)\n", r.Method, path, request_ip)
 	}
 }

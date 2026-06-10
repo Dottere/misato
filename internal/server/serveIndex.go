@@ -1,12 +1,15 @@
 package server
 
-import (
-	"net/http"
-	"path/filepath"
-)
+import "net/http"
 
 func serveMainPage(w http.ResponseWriter, r *http.Request) {
-	path := filepath.Join("web", "src", "index.html")
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	renderTemplate(w, r, "home.html", PageData{
+		Title:      "Home — Misato",
+		ActivePage: "home",
+	})
 
-	handleFileServing(path, w, r)
 }
