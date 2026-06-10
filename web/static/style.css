@@ -9,10 +9,10 @@
 :root {
     --font: "Segoe UI", system-ui, -apple-system, sans-serif;
     --color-bg: #ffffff;
-    --color-surface: #f5f5f4;
+    --color-surface: gray;
     --color-border: rgba(0, 0, 0, 0.1);
     --color-text: #1a1a1a;
-    --color-muted: #6b7280;
+    --color-muted: black;
     --color-accent: #1a1a1a;
     --nav-height: 56px;
     --page-max: 860px;
@@ -43,15 +43,16 @@ body {
     justify-content: space-between;
     padding: 0 var(--page-pad);
     background: rgba(255, 255, 255, 0.85);
+    background-color: rgba(0, 0, 10, 0.8);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--color-border);
 }
 
 .site-logo {
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 600;
-    color: var(--color-text);
+    color: lightgray;
     text-decoration: none;
     letter-spacing: -0.2px;
 }
@@ -62,8 +63,8 @@ body {
 }
 
 .nav-link {
-    font-size: 14px;
-    color: var(--color-muted);
+    font-size: 16px;
+    color: lightgray;
     text-decoration: none;
     padding: 6px 12px;
     border-radius: var(--radius);
