@@ -1,0 +1,17 @@
+{{template "base" .}} {{define "content"}}
+<section class="reader">
+    <h1>{{.Title}}</h1>
+
+    <div class="comic-pages">
+        {{range .Images}}
+        <img
+            src="{{.}}"
+            alt="Comic Page"
+            style="max-width: 100%; display: block; margin: 0 auto 10px auto"
+        />
+        {{else}}
+        <p>No pages found in this comic.</p>
+        {{end}}
+    </div>
+</section>
+{{end}}

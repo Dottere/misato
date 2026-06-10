@@ -8,12 +8,15 @@
 
 :root {
     --font: "Segoe UI", system-ui, -apple-system, sans-serif;
-    --color-bg: #ffffff;
-    --color-surface: gray;
-    --color-border: rgba(0, 0, 0, 0.1);
-    --color-text: #1a1a1a;
-    --color-muted: black;
-    --color-accent: #1a1a1a;
+    --color-bg: #050508;
+    --color-surface: rgba(255, 255, 255, 0.1);
+    --color-border: rgba(255, 255, 255, 0.12);
+
+    --color-text: #f3f4f6;
+    --color-muted: #9ca3af;
+
+    --color-accent: #60a5fa;
+
     --nav-height: 56px;
     --page-max: 860px;
     --page-pad: 1.5rem;
@@ -42,7 +45,6 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0 var(--page-pad);
-    background: rgba(255, 255, 255, 0.85);
     background-color: rgba(0, 0, 10, 0.8);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -52,7 +54,7 @@ body {
 .site-logo {
     font-size: 19px;
     font-weight: 600;
-    color: lightgray;
+    color: var(--color-text);
     text-decoration: none;
     letter-spacing: -0.2px;
 }
@@ -64,7 +66,7 @@ body {
 
 .nav-link {
     font-size: 16px;
-    color: lightgray;
+    color: var(--color-muted);
     text-decoration: none;
     padding: 6px 12px;
     border-radius: var(--radius);
@@ -93,7 +95,7 @@ body {
     padding: 3rem var(--page-pad);
 }
 
-/* Body */
+/* Body & Links */
 .hero h1 {
     font-size: 2rem;
     font-weight: 600;
@@ -108,6 +110,22 @@ body {
     max-width: 480px;
 }
 
+.hero ul {
+    list-style-position: inside;
+    margin-top: 1rem;
+}
+
+.hero a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: opacity 0.15s;
+}
+
+.hero a:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
 .hero-actions {
     margin-top: 1.5rem;
     display: flex;
@@ -119,11 +137,11 @@ body {
     display: inline-block;
     padding: 9px 20px;
     background: var(--color-accent);
-    color: #ffffff;
+    color: #000000;
     border: none;
     border-radius: var(--radius);
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: none;
     cursor: pointer;
     transition: opacity 0.15s;
