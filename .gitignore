@@ -2,11 +2,15 @@
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Binaries for programs and plugins
+/bin
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+
+# The actual comic book files
+*.cbz
 
 # Test binary, built with `go test -c`
 *.test
