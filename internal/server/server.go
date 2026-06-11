@@ -7,9 +7,11 @@ import (
 	"net/http"
 )
 
-var serverConfig config.Config
+var cfg config.Config
 
 func Start() {
+
+	initUptime()
 
 	mux := http.NewServeMux()
 
@@ -23,7 +25,6 @@ func Start() {
 		A handlert a saját fájljában definiáld, pl mint a server/serveIndex.go fájlban!
 	*/
 
-	fmt.Printf("/%s/", serverConfig.FilesDir)
 	endpoints := map[string]http.HandlerFunc{
 		"/":          serveMainPage,
 		"/about":     serveAboutPage,
@@ -37,11 +38,16 @@ func Start() {
 		mux.HandleFunc(path, handler)
 	}
 
-	fmt.Printf("Server open on port %d...\n", *serverConfig.ServerPort)
+	fmt.Println("MISATO - Manga Site")
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", serverConfig.BindAddress, *serverConfig.ServerPort), mux))
+	fmt.Println("\nInitial scan...")
+	scan()
+	go Listen()
+
+	fmt.Printf("\nBinding server to address %s on port %d...\n", cfg.BindAddress, *cfg.ServerPort)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", cfg.BindAddress, *cfg.ServerPort), mux))
 }
 
 func Configure(configuration config.Config) {
-	serverConfig = configuration
+	cfg = configuration
 }

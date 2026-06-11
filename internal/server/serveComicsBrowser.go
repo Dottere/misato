@@ -9,21 +9,34 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+)
+
+var (
+	storedItems []ComicCard
+	itemsMutex  sync.RWMutex // The lock for our cache
 )
 
 func serveBrowserPage(w http.ResponseWriter, r *http.Request) {
+
+	itemsMutex.RLock()
+
+	itemsToRender := storedItems
+
+	itemsMutex.RUnlock()
+
 	renderTemplate(w, r, "comics.html", PageData{
 		Title:      "Comics — Misato",
 		ActivePage: "comics",
-		Items:      getAllStoredComics(),
-		FilesDir:   serverConfig.FilesDir,
+		Items:      itemsToRender,
+		FilesDir:   cfg.FilesDir,
 	})
 
 }
 
 // Átnézi a mappát ahol a mangák tárolva vannak és indexeli őket
 func getAllStoredComics() []ComicCard {
-	folderPath := serverConfig.FilesDir
+	folderPath := cfg.FilesDir
 
 	entries, err := os.ReadDir(folderPath)
 	if err != nil {
@@ -41,6 +54,8 @@ func getAllStoredComics() []ComicCard {
 		comicName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
 		filePath := filepath.Join(folderPath, entry.Name())
 
+		fmt.Printf("\nScanning \"%s\"", comicName)
+
 		cbzFile, err := cbz.OpenCbz(filePath)
 		if err != nil {
 			continue
@@ -57,5 +72,17 @@ func getAllStoredComics() []ComicCard {
 			CoverURL: coverUrl,
 		})
 	}
+	fmt.Printf("\n\nScanning finished\n")
+	fmt.Printf("Scanned %d comics\n", len(storedComics))
 	return storedComics
+}
+
+func scan() {
+	newItems := getAllStoredComics()
+
+	itemsMutex.Lock()
+
+	storedItems = newItems
+
+	itemsMutex.Unlock()
 }

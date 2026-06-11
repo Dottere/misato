@@ -24,7 +24,7 @@ func serveFilesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileName := comicName + ".cbz"
-	filePath := filepath.Join(serverConfig.FilesDir, fileName)
+	filePath := filepath.Join(cfg.FilesDir, fileName)
 
 	cbzFile, err := cbz.OpenCbz(filePath)
 

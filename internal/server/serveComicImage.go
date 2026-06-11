@@ -28,7 +28,7 @@ func serveComic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(serverConfig.FilesDir, comicName+".cbz")
+	filePath := filepath.Join(cfg.FilesDir, comicName+".cbz")
 	zr, err := zip.OpenReader(filePath)
 	if err != nil {
 		http.Error(w, "File not found", http.StatusNotFound)
