@@ -3,10 +3,14 @@ package server
 import (
 	"fmt"
 	"log"
+	"misato/config"
 	"net/http"
 )
 
-func Start(port int) {
+var serverConfig config.Config
+
+func Start() {
+
 	mux := http.NewServeMux()
 
 	fs := http.FileServer(http.Dir("web"))
@@ -18,9 +22,14 @@ func Start(port int) {
 
 		A handlert a saját fájljában definiáld, pl mint a server/serveIndex.go fájlban!
 	*/
+
+	fmt.Printf("/%s/", serverConfig.FilesDir)
 	endpoints := map[string]http.HandlerFunc{
-		"/":      serveMainPage,
-		"/about": serveAboutPage,
+		"/":          serveMainPage,
+		"/about":     serveAboutPage,
+		"/comics":    serveBrowserPage,
+		"/mangas/":   serveFilesPage,
+		"/api/image": serveComic,
 	}
 
 	for path, handler := range endpoints {
@@ -28,7 +37,11 @@ func Start(port int) {
 		mux.HandleFunc(path, handler)
 	}
 
-	fmt.Printf("Server open on port %d...\n", port)
+	fmt.Printf("Server open on port %d...\n", *serverConfig.ServerPort)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), mux))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%d", serverConfig.BindAddress, *serverConfig.ServerPort), mux))
+}
+
+func Configure(configuration config.Config) {
+	serverConfig = configuration
 }

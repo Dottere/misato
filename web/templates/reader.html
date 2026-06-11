@@ -1,17 +1,36 @@
-{{template "base" .}} {{define "content"}}
-<section class="reader">
-    <h1>{{.Title}}</h1>
-
-    <div class="comic-pages">
+{{template "base" .}} {{define "head"}}
+<link rel="stylesheet" href="/static/css/reader.css" />
+<script>
+    window.CHAPTER_IMAGES = [
         {{range .Images}}
-        <img
-            src="{{.}}"
-            alt="Comic Page"
-            style="max-width: 100%; display: block; margin: 0 auto 10px auto"
-        />
-        {{else}}
-        <p>No pages found in this comic.</p>
+        "{{.}}",
         {{end}}
+    ];
+</script>
+<script src="/static/js/reader.js" defer></script>
+{{end}} {{define "content"}}
+<section class="reader-mode">
+    <div class="reader-header">
+        <a href="/comics" class="btn-secondary" style="padding: 4px 12px"
+            >← Back</a
+        >
+        <h1 class="reader-title">{{.Title}}</h1>
+        <span id="page-counter" class="page-counter">Loading...</span>
+    </div>
+
+    <div class="manga-container">
+        <div
+            class="click-zone zone-left"
+            onclick="changePage(-1)"
+            title="Previous Page"
+        ></div>
+        <div
+            class="click-zone zone-right"
+            onclick="changePage(1)"
+            title="Next Page"
+        ></div>
+
+        <img id="manga-page" src="" alt="Comic Page" draggable="false" />
     </div>
 </section>
 {{end}}

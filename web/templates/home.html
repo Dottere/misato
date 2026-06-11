@@ -1,5 +1,82 @@
 {{template "base" .}} {{define "content"}}
 <section class="hero">
-    <h1>HOMEPAGE</h1>
+    <h1>Welcome to Misato</h1>
+    <p>
+        Your personal, lightweight, and self-hosted manga and comic book reader.
+        Drop your .cbz archives into your storage folder and start reading
+        instantly, right from your browser.
+    </p>
+
+    <div class="hero-actions">
+        <a href="/comics" class="btn-primary">Browse Library</a>
+        <a href="/about" class="btn-secondary">Learn More</a>
+    </div>
+
+    <div style="margin-top: 3.5rem">
+        <h2
+            style="
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin-bottom: 1.25rem;
+                color: var(--color-text);
+            "
+        >
+            Why use Misato?
+        </h2>
+
+        <ul
+            style="
+                list-style: none;
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                color: var(--color-muted);
+            "
+        >
+            <li style="display: flex; gap: 10px; align-items: flex-start">
+                <span style="font-size: 1.2rem">📚</span>
+                <div>
+                    <strong style="color: var(--color-text); display: block"
+                        >Local Storage First</strong
+                    >
+                    Read directly from your own hard drive. No cloud accounts,
+                    subscriptions, or internet connection required.
+                </div>
+            </li>
+
+            <li style="display: flex; gap: 10px; align-items: flex-start">
+                <span style="font-size: 1.2rem">⚡</span>
+                <div>
+                    <strong style="color: var(--color-text); display: block"
+                        >Blazing Fast Backend</strong
+                    >
+                    Powered by a highly optimized Go server that unzips and
+                    serves high-quality images instantly.
+                </div>
+            </li>
+
+            <li style="display: flex; gap: 10px; align-items: flex-start">
+                <span style="font-size: 1.2rem">🌙</span>
+                <div>
+                    <strong style="color: var(--color-text); display: block"
+                        >Built for Late Nights</strong
+                    >
+                    A clean, distraction-free interface built from the ground up
+                    with a sophisticated dark mode.
+                </div>
+            </li>
+
+            <li style="display: flex; gap: 10px; align-items: flex-start">
+                <span style="font-size: 1.2rem">📦</span>
+                <div>
+                    <strong style="color: var(--color-text); display: block"
+                        >Native CBZ Support</strong
+                    >
+                    Seamlessly handles standard Comic Book Zip (.cbz) archives
+                    without needing to manually extract folders.
+                </div>
+            </li>
+        </ul>
+    </div>
 </section>
 {{end}}

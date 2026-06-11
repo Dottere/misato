@@ -10,7 +10,7 @@ import (
 )
 
 type Cbz struct {
-	handle *zip.ReadCloser
+	Handle *zip.ReadCloser
 	// each index is a page number, each value is an index of an image
 	// representing a page in the handle.File slice
 	FileIndicesToPages []uint
@@ -46,7 +46,7 @@ func OpenCbz(name string) (Cbz, error) {
 	}
 
 	cbz := Cbz{
-		handle: r,
+		Handle: r,
 		// preallocate as many mappings as there are files
 		FileIndicesToPages: make([]uint, len(r.File)),
 		UrlPath:            pathToUrl(name),

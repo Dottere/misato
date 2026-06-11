@@ -1,12 +1,23 @@
-{{template "base" .}} {{define "content"}}
+{{template "base" .}} {{define "head"}}
+<link rel="stylesheet" href="/static/css/comic.css" />
+{{end}} {{define "content"}}
 <section class="hero">
     <h1>Comics</h1>
-    <ul>
+
+    <div class="comic-grid">
         {{range .Items}}
-        <li><a href="mangas/{{.}}">{{.}}</a></li>
+        <a href="/{{$.FilesDir}}/{{.Title}}" class="comic-card">
+            <div class="comic-cover">
+                <img src="{{.CoverURL}}" alt="{{.Title}}" />
+            </div>
+            <span class="comic-title">{{.Title}}</span>
+        </a>
         {{else}}
-        <li>Nincsenek megjeleníthető elemek.</li>
+        <div class="empty-state">
+            There's nothing here yet! Drop your .cbz files into the specified
+            folder and get to reading!.
+        </div>
         {{end}}
-    </ul>
+    </div>
 </section>
 {{end}}

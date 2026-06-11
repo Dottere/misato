@@ -5,13 +5,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{.Title}}</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  {{block "head" .}}{{end}}
 </head>
 <body>
   <header class="site-header">
     <a class="site-logo" href="/">Misato</a>
     <nav class="main-nav">
       <a href="/"      class="nav-link {{if eq .ActivePage "home"}}active{{end}}">Home</a>
+      <a href="/about"      class="nav-link {{if eq .ActivePage "about"}}active{{end}}">About</a>
       <a href="/comics" class="nav-link {{if eq .ActivePage "comics"}}active{{end}}">Comics</a>
     </nav>
   </header>
