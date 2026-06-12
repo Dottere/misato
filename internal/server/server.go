@@ -78,16 +78,15 @@ func NewAppServer(cfg config.Config) *AppServer {
 //
 // Példának lásd a serveIndex.go fájlt.
 func (srv *AppServer) RegisterRoute(route string, handler http.HandlerFunc) (err error) {
+	srv.coreMutex.Lock()
+	defer srv.coreMutex.Unlock()
+
 	if _, exists := srv.endpoints[route]; exists {
 		return ErrRouteExists
 	}
 
-	srv.coreMutex.Lock()
-
 	srv.endpoints[route] = handler
 	srv.mux.Handle(route, handler)
-
-	srv.coreMutex.Unlock()
 
 	return nil
 }
