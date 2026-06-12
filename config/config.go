@@ -8,6 +8,16 @@ import (
 
 /*
 A config releváns paramétereit tartalmazó struktúra, csak ezeket olvassa ki a JSON fájlból.
+
+# Paraméterek
+  - ConfigFilePath: A config fájl elérési útja, akkor állítódik ha a szerver indításakor -c vagy --config flaggel beállítják
+  - ServerPort: A port amin a szerver fut, kötelező megadni, vagy a -p/--port flagekkel vagy pedig a configban
+  - FilesDir: A mappa ahol a mangák tárolva vannak, a webszerver innen olvassa ki őket
+  - DebugMode: Beállítja, hogy a szerver debug üzemmódban fut-e !MÉG NEM CSINÁL SEMMIT, TO BE IMPLEMENTED!
+  - BindAddress: Az IP cím amihez a szervert hozzákötjük
+  - ReadTimeout: Ha egy olvasási kérelem túl sokáig tart akkor ennyi másodperc után kidob a szerver
+  - WriteTimeout: Ha egy írási kérelem túl sokáig tart, akkor ennyi másodperc után kidob a szerver
+  - IdleTimeout: Ha a felhasználó nem csinál semmit, akkor ennyi másodperc után kidob a szerver
 */
 type Config struct {
 	ConfigFilePath string
@@ -15,6 +25,9 @@ type Config struct {
 	FilesDir       string `json:"files_dir"`
 	DebugMode      bool   `json:"debug_mode"`
 	BindAddress    string `json:"bind_address"`
+	ReadTimeout    int    `json:"read_timeout"`
+	WriteTimeout   int    `json:"write_timeout"`
+	IdleTimeout    int    `json:"idle_timeout"`
 }
 
 /*

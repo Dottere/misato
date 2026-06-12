@@ -2,5 +2,8 @@
   "server_port": 8080,
   "files_dir": "mangas",
   "debug_mode": true,
-  "bind_address": "127.0.0.1"
+  "bind_address": "127.0.0.1",
+  "read_timeout": 10,
+  "write_timeout": 10,
+  "idle_timeout": 120
 }

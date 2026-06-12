@@ -60,9 +60,9 @@ func NewAppServer(cfg config.Config) *AppServer {
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.BindAddress, *cfg.ServerPort),
 		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  time.Duration(cfg.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.WriteTimeout) * time.Second,
+		IdleTimeout:  time.Duration(cfg.IdleTimeout) * time.Second,
 	}
 
 	return &AppServer{
