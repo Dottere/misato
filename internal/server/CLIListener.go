@@ -3,12 +3,19 @@ package server
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"misato/internal/memstat"
 	"os"
 	"strings"
 )
 
-func Listen() {
+/*
+Megnyitja a konzolt amin keresztül lehet vezérelni a szervert parancsok segítségével
+*/
+func Listen(srv *AppServer) {
+
+	cfg := srv.cfg
+
 	scanner := bufio.NewScanner(os.Stdin)
 
 	fmt.Println("Server started. Type a command ('help' for commands or 'exit' to quit):")
@@ -19,6 +26,11 @@ func Listen() {
 		if !scanner.Scan() {
 			fmt.Println("Program terminated (SIGINT)")
 			os.Exit(0)
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Printf("Console input error: %v\n", err)
+			return
 		}
 
 		text := scanner.Text()
@@ -37,10 +49,12 @@ list - Get a list of all comics loaded
 count - Get a number of how many comics are loaded
 rescan - Initiates a library rescan
 stats - Prints memory statistics
-ping - pong!`)
+ping - pong!
+clear - Clear terminal
+config - Print current config`)
 		case "exit", "stop":
 			fmt.Println("\nShutting down server...")
-			os.Exit(0)
+			srv.Stop()
 		case "ip":
 			fmt.Printf("\nServer is bound to address %s\n", cfg.BindAddress)
 		case "port":
@@ -49,14 +63,14 @@ ping - pong!`)
 			fmt.Printf("\n%s", getCurrentUptime())
 		case "list":
 			fmt.Printf("\nStored comics:\n\n")
-			for idx, elem := range getAllStoredComics() {
+			for idx, elem := range srv.getAllStoredComics() {
 				fmt.Printf("(%d) %s\n", idx+1, elem.Title)
 			}
 		case "count":
-			fmt.Printf("\nLoaded comics: (%d)\n", len(getAllStoredComics()))
+			fmt.Printf("\nLoaded comics: (%d)\n", len(srv.storedItems))
 		case "rescan":
 			fmt.Println("\nInitiating rescan...")
-			scan()
+			srv.scan()
 		case "stats":
 			memstat.PrintStats()
 		case "ping":

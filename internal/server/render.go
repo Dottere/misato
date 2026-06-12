@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 )
 
-// Ez azért kell hogy a kiválasztott oldalt számon tartsuk (jelenleg csak navbar kiemeléshez)
 type PageData struct {
 	Title      string
 	ActivePage string
@@ -16,12 +15,15 @@ type PageData struct {
 	FilesDir   string
 }
 
+/*
+Dinamikusan jeleníti meg az oldalakat a Go beépített html template-jeinek segítségével
+*/
 func renderTemplate(w http.ResponseWriter, r *http.Request, name string, data PageData) {
 
 	base := filepath.Join("web", "templates", "base.html")
 	page := filepath.Join("web", "templates", name)
 
-	logToCLI(page, r)
+	logRequestToCLI(page, r)
 
 	tmpl, err := template.ParseFiles(base, page)
 	if err != nil {

@@ -9,8 +9,15 @@ import (
 	"strings"
 )
 
-func serveFilesPage(w http.ResponseWriter, r *http.Request) {
-	comicNameURL := strings.TrimPrefix(r.URL.Path, "/mangas/")
+/*
+Kiszolgálja a mangakérelmeket, amik a comics.html oldalról "/mangas/manga_név" formátumú kérésekként érkeznek
+
+# Oldal címe:
+  - A manga neve
+*/
+func (srv *AppServer) ServeFilesPage(w http.ResponseWriter, r *http.Request) {
+
+	comicNameURL := strings.TrimPrefix(r.URL.Path, fmt.Sprintf("/%s/", srv.cfg.FilesDir))
 
 	comicName, err := url.PathUnescape(comicNameURL)
 	if err != nil {
@@ -24,7 +31,7 @@ func serveFilesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileName := comicName + ".cbz"
-	filePath := filepath.Join(cfg.FilesDir, fileName)
+	filePath := filepath.Join(srv.cfg.FilesDir, fileName)
 
 	cbzFile, err := cbz.OpenCbz(filePath)
 

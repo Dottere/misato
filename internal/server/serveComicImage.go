@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type ComicCard struct {
@@ -13,11 +14,19 @@ type ComicCard struct {
 	CoverURL string
 }
 
-func serveComic(w http.ResponseWriter, r *http.Request) {
+/*
+Megjeleníti az olvasót a kérelmezett mangával feltöltve
+*/
+func (srv *AppServer) ServeComic(w http.ResponseWriter, r *http.Request) {
 	comicName := r.URL.Query().Get("comic")
 	indexStr := r.URL.Query().Get("index")
 
-	if comicName == "" || indexStr == "" {
+	if comicName == "" || strings.Contains(comicName, "..") || strings.Contains(comicName, "/") || strings.Contains(comicName, "\\") {
+		http.Error(w, "Invalid comic name", http.StatusBadRequest)
+		return
+	}
+
+	if indexStr == "" {
 		http.Error(w, "Missing parameters", http.StatusBadRequest)
 		return
 	}
@@ -28,7 +37,7 @@ func serveComic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(cfg.FilesDir, comicName+".cbz")
+	filePath := filepath.Join(srv.cfg.FilesDir, comicName+".cbz")
 	zr, err := zip.OpenReader(filePath)
 	if err != nil {
 		http.Error(w, "File not found", http.StatusNotFound)
@@ -42,6 +51,7 @@ func serveComic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	imageFile := zr.File[zipIndex]
+	ext := strings.ToLower(filepath.Ext(imageFile.Name))
 
 	rc, err := imageFile.Open()
 	if err != nil {
@@ -50,6 +60,14 @@ func serveComic(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rc.Close()
 
-	w.Header().Set("Content-Type", "image/jpeg")
+	switch ext {
+	case ".png":
+		w.Header().Set("Content-Type", "image/png")
+	case ".webp":
+		w.Header().Set("Content-Type", "image/webp")
+	default:
+		w.Header().Set("Content-Type", "image/jpeg")
+	}
+
 	io.Copy(w, rc)
 }

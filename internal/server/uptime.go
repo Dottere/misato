@@ -5,12 +5,19 @@ import (
 	"time"
 )
 
+// A szerver elindulásakor kimentődik az akkori időpont és eltárolódik ebben a változóban
 var startTime time.Time
 
+/*
+Kimenti a jelenlegi időt egy startTime nevű globális változóba
+*/
 func initUptime() {
 	startTime = time.Now()
 }
 
+/*
+A startTime globális változó alapján meghatározza, hogy mennyi idő telt el az initUptime() hívása óta
+*/
 func getCurrentUptime() string {
 	d := time.Since(startTime)
 

@@ -2,7 +2,13 @@ package server
 
 import "net/http"
 
-func serveMainPage(w http.ResponseWriter, r *http.Request) {
+/*
+Betölti a kezdőoldalt ("/" elérési úton)
+
+# Átadott paraméterek:
+  - Oldal címe: Home — Misato
+*/
+func ServeMainPage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return

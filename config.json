@@ -1,6 +1,6 @@
 {
-    "server_port": 8080,
-    "files_dir": "mangas",
-    "debug_mode": true,
-    "bind_address": "127.0.0.1"
+  "server_port": 8080,
+  "files_dir": "mangas",
+  "debug_mode": true,
+  "bind_address": "127.0.0.1"
 }

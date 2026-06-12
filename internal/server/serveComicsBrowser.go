@@ -9,34 +9,36 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
-var (
-	storedItems []ComicCard
-	itemsMutex  sync.RWMutex // The lock for our cache
-)
+/*
+Végigiterál az eltárolt mangákon és dinamikusan megjeleníti azokat az oldalon
 
-func serveBrowserPage(w http.ResponseWriter, r *http.Request) {
+# Átadott paraméterek:
+  - Oldal címe: Comics — Misato
+  - Az eltárolt mangák: itemsToRender
+  - A mappa ahol a mangák tárolva vannak: srv.cfg.Filesdir (dinamikusan kiolvasott)
+*/
+func (srv *AppServer) ServeBrowserPage(w http.ResponseWriter, r *http.Request) {
 
-	itemsMutex.RLock()
+	srv.cacheMutex.RLock()
 
-	itemsToRender := storedItems
+	itemsToRender := srv.storedItems
 
-	itemsMutex.RUnlock()
+	srv.cacheMutex.RUnlock()
 
 	renderTemplate(w, r, "comics.html", PageData{
 		Title:      "Comics — Misato",
 		ActivePage: "comics",
 		Items:      itemsToRender,
-		FilesDir:   cfg.FilesDir,
+		FilesDir:   srv.cfg.FilesDir,
 	})
 
 }
 
 // Átnézi a mappát ahol a mangák tárolva vannak és indexeli őket
-func getAllStoredComics() []ComicCard {
-	folderPath := cfg.FilesDir
+func (srv *AppServer) getAllStoredComics() []ComicCard {
+	folderPath := srv.cfg.FilesDir
 
 	entries, err := os.ReadDir(folderPath)
 	if err != nil {
@@ -77,12 +79,12 @@ func getAllStoredComics() []ComicCard {
 	return storedComics
 }
 
-func scan() {
-	newItems := getAllStoredComics()
+func (srv *AppServer) scan() {
+	newItems := srv.getAllStoredComics()
 
-	itemsMutex.Lock()
+	srv.cacheMutex.Lock()
 
-	storedItems = newItems
+	srv.storedItems = newItems
 
-	itemsMutex.Unlock()
+	srv.cacheMutex.Unlock()
 }

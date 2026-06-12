@@ -5,6 +5,9 @@ import (
 	"runtime"
 )
 
+/*
+Segédfüggvény ami memóriastatisztikákat ír ki a szerverről
+*/
 func PrintStats() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
