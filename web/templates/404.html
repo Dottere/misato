@@ -1,0 +1,20 @@
+{{define "head"}}
+<link rel="stylesheet" href="/static/css/404.css" />
+{{end}} {{define "content"}}
+<div class="hero container">
+    <h1 class="code">404</h1>
+    <h1>Target Not Found</h1>
+
+    <p class="info">
+        The requested resource at
+        <strong class="activePage">{{.ActivePage}}</strong> could not be
+        located. It may have been moved, deleted, or never existed in the first
+        place.
+    </p>
+
+    <div class="hero-actions">
+        <a href="/" class="btn-primary">Return to Home</a>
+        <a href="/comics" class="btn-secondary">Browse Comics</a>
+    </div>
+</div>
+{{end}}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"misato/config"
 	"net/http"
@@ -13,6 +14,9 @@ import (
 
 var ErrRouteExists = errors.New("route already exists!")
 
+// Enkapszulálja az alap http.Server struktúrát egy
+// saját implementációba ami tárolja a projektspecifikus
+// változókat pl.: config, mutexek, saját ServeMux, végpontok, indexelt mangák, cachelt templatek
 type AppServer struct {
 	// A közös állapotokat írni és olvasni kell, ezért kell a mutex
 	//
@@ -41,7 +45,10 @@ type AppServer struct {
 	cacheMutex sync.RWMutex
 
 	// Az eltárolt mangák itt vannak cachelve és indexelve
-	storedItems []ComicCard
+	storedItems ComicCards
+
+	// http template cache, hogy ne kelljen mindig újraolvasni
+	templateCache map[string]*template.Template
 }
 
 // Az *AppServer struktúra publikus konstruktora, alapvetően
@@ -59,17 +66,18 @@ func NewAppServer(cfg config.Config) *AppServer {
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.BindAddress, *cfg.ServerPort),
-		Handler:      mux,
+		Handler:      LoggingMiddleware(mux),
 		ReadTimeout:  time.Duration(cfg.ReadTimeout),
 		WriteTimeout: time.Duration(cfg.WriteTimeout),
 		IdleTimeout:  time.Duration(cfg.IdleTimeout),
 	}
 
 	return &AppServer{
-		cfg:       cfg,
-		mux:       mux,
-		srv:       server,
-		endpoints: make(map[string]http.HandlerFunc),
+		cfg:           cfg,
+		mux:           mux,
+		srv:           server,
+		endpoints:     make(map[string]http.HandlerFunc),
+		templateCache: make(map[string]*template.Template),
 	}
 }
 
@@ -168,6 +176,10 @@ func (srv *AppServer) Stop() {
 	}
 }
 
+// Lemásolja a régi konfigurációt, majd eldobja a régi szervert.
+// Az új szerverben mindent újonnan inicializál kivéve a régi muxot, azt megtartja
+// a regisztrált elérési utak megtartása érdekében. Ha ezzel végzett, akkor elindítja az új szervert
+// és új uptime időzítőt is indít.
 func (srv *AppServer) Restart() {
 	fmt.Println("Initiating server restart...")
 
@@ -183,7 +195,7 @@ func (srv *AppServer) Restart() {
 
 	srv.srv = &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", srv.cfg.BindAddress, *srv.cfg.ServerPort),
-		Handler:      srv.mux, // A régi mux-ot (és a regisztrált utakat) megtartjuk!
+		Handler:      LoggingMiddleware(srv.mux), // A régi mux-ot (és a regisztrált utakat) megtartjuk!
 		ReadTimeout:  time.Duration(srv.cfg.ReadTimeout),
 		WriteTimeout: time.Duration(srv.cfg.WriteTimeout),
 		IdleTimeout:  time.Duration(srv.cfg.IdleTimeout),

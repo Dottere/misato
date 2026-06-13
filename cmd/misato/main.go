@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-const VERSION string = "0.3.1"
+const VERSION string = "0.4.0"
 
 var ConfigPath string
 
@@ -18,10 +18,10 @@ func main() {
 	cfg := config.SetupConfig(configFilePath, cliPort)
 
 	srv := server.NewAppServer(cfg)
-	srv.RegisterRoute("/", server.ServeMainPage)
-	srv.RegisterRoute("/about", server.ServeAboutPage)
+	srv.RegisterRoute("/", srv.ServeMainPage)
+	srv.RegisterRoute("/about", srv.ServeAboutPage)
 	srv.RegisterRoute("/comics", srv.ServeBrowserPage)
-	srv.RegisterRoute(fmt.Sprintf("/%s/", cfg.FilesDir), srv.ServeFilesPage)
+	srv.RegisterRoute(fmt.Sprintf("/%s/{comicName}", cfg.FilesDir), srv.ServeFilesPage) // Go 1.22+ wildcard regisztrálás
 	srv.RegisterRoute("/api/image", srv.ServeComic)
 
 	srv.Start()

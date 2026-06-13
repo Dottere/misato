@@ -15,7 +15,18 @@
             >← Back</a
         >
         <h1 class="reader-title">{{.Title}}</h1>
-        <span id="page-counter" class="page-counter">Loading...</span>
+
+        <div class="page-jump-container">
+            <input
+                type="number"
+                id="page-input"
+                class="page-input"
+                min="1"
+                value="1"
+                title="Jump to page"
+            />
+            <span id="page-total" class="page-total"> / Loading...</span>
+        </div>
     </div>
 
     <div class="manga-container">
@@ -29,7 +40,6 @@
             onclick="changePage(1)"
             title="Next Page"
         ></div>
-
         <img id="manga-page" src="" alt="Comic Page" draggable="false" />
     </div>
 </section>

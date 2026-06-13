@@ -1,0 +1,19 @@
+.container {
+    padding-top: 8vh;
+}
+
+.hero .code {
+    font-size: 5rem;
+    line-height: 1;
+    margin-bottom: 0;
+    color: var(--color-accent);
+}
+
+.hero .info {
+    margin-top: 1rem;
+    max-width: 600px;
+}
+
+.hero .activePage {
+    color: var(--color-text);
+}
