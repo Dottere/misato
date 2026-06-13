@@ -2,8 +2,11 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"strings"
+	"time"
 )
 
 /*
@@ -21,13 +24,34 @@ A config releváns paramétereit tartalmazó struktúra, csak ezeket olvassa ki 
 */
 type Config struct {
 	ConfigFilePath string
-	ServerPort     *int   `json:"server_port"`
-	FilesDir       string `json:"files_dir"`
-	DebugMode      bool   `json:"debug_mode"`
-	BindAddress    string `json:"bind_address"`
-	ReadTimeout    int    `json:"read_timeout"`
-	WriteTimeout   int    `json:"write_timeout"`
-	IdleTimeout    int    `json:"idle_timeout"`
+	ServerPort     *int           `json:"server_port"`
+	FilesDir       string         `json:"files_dir"`
+	DebugMode      bool           `json:"debug_mode"`
+	BindAddress    string         `json:"bind_address"`
+	ReadTimeout    ConfigDuration `json:"read_timeout"`
+	WriteTimeout   ConfigDuration `json:"write_timeout"`
+	IdleTimeout    ConfigDuration `json:"idle_timeout"`
+}
+
+// Mivel a beépített típusokat nem lehet
+// módosítani ezért csinálunk egy sajátot ami
+// kvázi ugyanaz mint a time.Duration csak
+// így hozzá lehet akasztani egy új metódust
+type ConfigDuration time.Duration
+
+// Mivel a time.Duration típus nem rendelkezik UnmarshalJSON implementációval
+// ezért itt definiálunk egy sajátot, így konfigurációfájlban megadhatóvá
+// válik ez a része is a kódnak.
+func (d *ConfigDuration) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), `"`)
+
+	parsed, err := time.ParseDuration(s)
+	if err != nil {
+		return err
+	}
+
+	*d = ConfigDuration(parsed)
+	return nil
 }
 
 /*
@@ -43,13 +67,13 @@ func loadConfig(configFilePath string) (*Config, error) {
 
 	data, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	var cfg Config
 	err = json.Unmarshal(data, &cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
 	return &cfg, nil

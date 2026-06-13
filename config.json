@@ -3,7 +3,7 @@
   "files_dir": "mangas",
   "debug_mode": true,
   "bind_address": "127.0.0.1",
-  "read_timeout": 10,
-  "write_timeout": 10,
-  "idle_timeout": 120
+  "read_timeout": "10s",
+  "write_timeout": "10s",
+  "idle_timeout": "2m"
 }

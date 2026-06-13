@@ -60,9 +60,9 @@ func NewAppServer(cfg config.Config) *AppServer {
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.BindAddress, *cfg.ServerPort),
 		Handler:      mux,
-		ReadTimeout:  time.Duration(cfg.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.WriteTimeout) * time.Second,
-		IdleTimeout:  time.Duration(cfg.IdleTimeout) * time.Second,
+		ReadTimeout:  time.Duration(cfg.ReadTimeout),
+		WriteTimeout: time.Duration(cfg.WriteTimeout),
+		IdleTimeout:  time.Duration(cfg.IdleTimeout),
 	}
 
 	return &AppServer{
@@ -139,15 +139,17 @@ func (srv *AppServer) Start() {
 	fmt.Println("\nInitial scan...")
 	srv.scan()
 
+	go func() {
+		err := srv.srv.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("HTTP server error: %v", err)
+		}
+	}()
+
 	srv.listenOnce.Do(func() {
 		fmt.Println("\nSetting up console listener...")
-		go Listen(srv)
+		Listen(srv)
 	})
-
-	err := srv.srv.ListenAndServe()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Printf("HTTP server error: %v", err)
-	}
 }
 
 // Leállítja a szervert, fontos, nem csak elvágja a kapcsolatot,
@@ -164,4 +166,41 @@ func (srv *AppServer) Stop() {
 			log.Printf("Server shutdown error: %v", err)
 		}
 	}
+}
+
+func (srv *AppServer) Restart() {
+	fmt.Println("Initiating server restart...")
+
+	configFilePath := srv.cfg.ConfigFilePath
+
+	srv.Stop()
+	fmt.Println("Old server instance stopped.")
+
+	newCfg := config.SetupConfig(configFilePath, 0)
+
+	srv.coreMutex.Lock()
+	srv.cfg = newCfg
+
+	srv.srv = &http.Server{
+		Addr:         fmt.Sprintf("%s:%d", srv.cfg.BindAddress, *srv.cfg.ServerPort),
+		Handler:      srv.mux, // A régi mux-ot (és a regisztrált utakat) megtartjuk!
+		ReadTimeout:  time.Duration(srv.cfg.ReadTimeout),
+		WriteTimeout: time.Duration(srv.cfg.WriteTimeout),
+		IdleTimeout:  time.Duration(srv.cfg.IdleTimeout),
+	}
+	srv.coreMutex.Unlock()
+
+	fmt.Printf("Restarting HTTP server on %s:%d...\n", srv.cfg.BindAddress, *srv.cfg.ServerPort)
+
+	initUptime()
+
+	go func() {
+		err := srv.srv.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("HTTP server error after restart: %v", err)
+		}
+	}()
+
+	fmt.Println("Restart complete!")
+
 }

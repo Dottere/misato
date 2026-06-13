@@ -12,8 +12,8 @@ import (
 /*
 Kiszolgálja a mangakérelmeket, amik a comics.html oldalról "/mangas/manga_név" formátumú kérésekként érkeznek
 
-# Oldal címe:
-  - A manga neve
+# Átadott paraméterek:
+  - Oldal címe: A manga neve
 */
 func (srv *AppServer) ServeFilesPage(w http.ResponseWriter, r *http.Request) {
 
