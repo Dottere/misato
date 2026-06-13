@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-const VERSION string = "1.3.1"
+const VERSION string = "0.3.1"
 
 var ConfigPath string
 
