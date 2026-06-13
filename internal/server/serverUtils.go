@@ -2,9 +2,9 @@ package server
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
-	"strings"
 )
 
 /*
@@ -28,10 +28,10 @@ Például:
 */
 func logRequestToCLI(path string, r *http.Request) {
 
-	request_ip_and_port := strings.Split(r.RemoteAddr, ":")
-
-	request_ip := request_ip_and_port[0]
-	// request_port := request_ip_and_port[1] // Talán később használva lesz
+	request_ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		request_ip = r.RemoteAddr
+	}
 
 	if isFilePathValid(path) {
 
@@ -42,7 +42,8 @@ func logRequestToCLI(path string, r *http.Request) {
 }
 
 /*
-A port pointerként van eltárolva, így csekkoljuk le, hogy létezik-e. Ez annak a másolását segíti elő
+A port pointerként van eltárolva, így csekkoljuk le, hogy létezik-e. Ez a függvény annak a másolását segíti elő,
+hogy mindenképpen értékként legyen átadva és ne mutatóként.
 */
 func copyPortPtr(v *int) *int {
 	if v == nil {

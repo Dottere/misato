@@ -21,7 +21,8 @@ func (srv *AppServer) ServeComic(w http.ResponseWriter, r *http.Request) {
 	comicName := r.URL.Query().Get("comic")
 	indexStr := r.URL.Query().Get("index")
 
-	if comicName == "" || strings.Contains(comicName, "..") || strings.Contains(comicName, "/") || strings.Contains(comicName, "\\") {
+	cleanComicName := filepath.Base(comicName)
+	if cleanComicName == "." || cleanComicName == "/" {
 		http.Error(w, "Invalid comic name", http.StatusBadRequest)
 		return
 	}
