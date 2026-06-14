@@ -6,15 +6,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{.Title}}</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
   {{block "head" .}}{{end}}
 </head>
 <body>
   <header class="site-header">
     <a class="site-logo" href="/">Misato</a>
-    <nav class="main-nav">
-      <a href="/"      class="nav-link {{if eq .ActivePage "home"}}active{{end}}">Home</a>
-      <a href="/about"      class="nav-link {{if eq .ActivePage "about"}}active{{end}}">About</a>
-      <a href="/comics" class="nav-link {{if eq .ActivePage "comics"}}active{{end}}">Comics</a>
+
+      {{if .IsLoggedIn}}
+      <nav class="main-nav">
+          <a href="/"      class="nav-link {{if eq .ActivePage "home"}}active{{end}}">Home</a>
+          <a href="/about"      class="nav-link {{if eq .ActivePage "about"}}active{{end}}">About</a>
+          <a href="/comics" class="nav-link {{if eq .ActivePage "comics"}}active{{end}}">Comics</a>
+          <div style="width: 1px; background: var(--color-border); margin: 0 8px;"></div>
+
+          <span style="color: var(--color-muted); padding: 6px 12px; font-size: 14px;">
+              👤 Tamás
+          </span>
+          <a href="/logout" class="nav-link" style="color: #ff5555;">Log Out</a>
+      </nav>
+      {{else}}
+      <nav class="main-nav">
+          <a href="/"      class="nav-link {{if eq .ActivePage "home"}}active{{end}}">Home</a>
+          <a href="/about"      class="nav-link {{if eq .ActivePage "about"}}active{{end}}">About</a>
+          <a href="/comics" class="nav-link {{if eq .ActivePage "comics"}}active{{end}}">Comics</a>
+
+          <div style="width: 1px; background: var(--color-border); margin: 0 8px;"></div>
+
+          <a href="/login" class="nav-link">Log In</a>
+          <a href="/register" class="login-btn" >Sign Up</a>
+      </nav>
+      {{end}}
     </nav>
   </header>
 

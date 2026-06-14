@@ -1,9 +1,12 @@
 {
+  "ConfigFilePath": "config.json",
   "server_port": 8080,
   "files_dir": "mangas",
-  "debug_mode": true,
+  "debug_mode": false,
   "bind_address": "127.0.0.1",
   "read_timeout": "10s",
   "write_timeout": "10s",
-  "idle_timeout": "2m"
+  "idle_timeout": "2m0s",
+  "database_path": "misato.db",
+  "allow_guest_access": true
 }

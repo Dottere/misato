@@ -1,7 +1,6 @@
 package server
 
 import (
-	"archive/zip"
 	"fmt"
 	"io"
 	"log"
@@ -64,8 +63,9 @@ func (srv *AppServer) getAllStoredComics() []ComicCard {
 		comicName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
 		filePath := filepath.Join(folderPath, entry.Name())
 
-		fmt.Printf("\nScanning \"%s\"", comicName)
-
+		if srv.cfg.DebugMode || srv.cfg.VerboseMode {
+			fmt.Printf("\nScanning \"%s\"", comicName)
+		}
 		cbzFile, err := cbz.OpenCbz(filePath)
 		if err != nil {
 			continue
@@ -82,8 +82,10 @@ func (srv *AppServer) getAllStoredComics() []ComicCard {
 			CoverURL: coverUrl,
 		})
 	}
-	fmt.Printf("\n\nScanning finished\n")
-	fmt.Printf("Scanned %d comics\n", len(storedComics))
+	if srv.cfg.DebugMode || srv.cfg.VerboseMode {
+		fmt.Printf("\n\nScanning finished\n")
+		fmt.Printf("Scanned %d comics\n", len(storedComics))
+	}
 	return storedComics
 }
 
@@ -200,13 +202,12 @@ func (srv *AppServer) ServeComic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(srv.cfg.FilesDir, comicName+".cbz")
-	zr, err := zip.OpenReader(filePath)
+	filePath := filepath.Join(srv.cfg.FilesDir, cleanComicName+".cbz")
+	zr, err := srv.getArchive(filePath)
 	if err != nil {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
-	defer zr.Close()
 
 	if zipIndex < 0 || zipIndex >= len(zr.File) {
 		http.Error(w, "Index out of bounds", http.StatusNotFound)
@@ -233,4 +234,15 @@ func (srv *AppServer) ServeComic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	io.Copy(w, rc)
+}
+
+func (srv *AppServer) Rescan(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	srv.scan()
+
+	w.WriteHeader(http.StatusOK)
 }

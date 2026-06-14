@@ -17,6 +17,8 @@ type PageData struct {
 	Items      []ComicCard
 	Images     []string
 	FilesDir   string
+	IsLoggedIn bool
+	Username   string
 }
 
 /*
@@ -41,13 +43,20 @@ func (srv *AppServer) renderTemplate(w http.ResponseWriter, _ *http.Request, nam
 		if exists {
 			tmpl = cachedTmpl
 		} else {
-			// Parse and save to cache
-			tmpl, err = template.ParseFiles(base, page)
-			if err == nil {
-				srv.coreMutex.Lock()
-				srv.templateCache[name] = tmpl
-				srv.coreMutex.Unlock()
+			srv.coreMutex.Lock()
+
+			cachedTmpl, exists := srv.templateCache[name]
+
+			if exists {
+				tmpl = cachedTmpl
+			} else {
+				tmpl, err = template.ParseFiles(base, page)
+				if err == nil {
+					srv.templateCache[name] = tmpl
+				}
 			}
+
+			srv.coreMutex.Unlock()
 		}
 	}
 

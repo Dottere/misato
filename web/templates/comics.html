@@ -2,8 +2,24 @@
 <link rel="stylesheet" href="/static/css/comic.css" />
 {{end}} {{define "content"}}
 <section class="hero">
-    <h1>Comics</h1>
-
+    <div
+        style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        "
+    >
+        <h1 style="margin-bottom: 0">Comics</h1>
+        <button
+            onclick="triggerRescan()"
+            id="rescan-btn"
+            class="btn-secondary"
+            style="padding: 6px 14px; font-size: 13px"
+        >
+            ↻ Rescan Library
+        </button>
+    </div>
     <div class="comic-grid">
         {{range .Items}}
         <a href="/{{$.FilesDir}}/{{.Title}}" class="comic-card">
@@ -15,9 +31,34 @@
         {{else}}
         <div class="empty-state">
             There's nothing here yet! Drop your .cbz files into the specified
-            folder and get to reading!.
+            folder and get to reading!
         </div>
         {{end}}
     </div>
 </section>
+
+<script>
+    async function triggerRescan() {
+        const btn = document.getElementById("rescan-btn");
+        const originalText = btn.innerText;
+
+        btn.innerText = "Scanning...";
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+
+        try {
+            const response = await fetch("/api/rescan", { method: "POST" });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                console.error("Server returned an error");
+                btn.innerText = "Error!";
+            }
+        } catch (err) {
+            console.error("Network error:", err);
+            btn.innerText = "Error!";
+        }
+    }
+</script>
 {{end}}

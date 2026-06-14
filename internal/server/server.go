@@ -1,18 +1,25 @@
 package server
 
 import (
+	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
 	"html/template"
 	"log"
-	"misato/config"
+	"misato/internal/config"
+	"misato/internal/database"
 	"net/http"
 	"sync"
 	"time"
 )
 
 var ErrRouteExists = errors.New("route already exists!")
+
+type CachedArchive struct {
+	Reader     *zip.ReadCloser
+	LastAccess time.Time
+}
 
 // Enkapszulálja az alap http.Server struktúrát egy
 // saját implementációba ami tárolja a projektspecifikus
@@ -28,10 +35,14 @@ type AppServer struct {
 	coreMutex sync.RWMutex
 
 	cfg config.Config // A config fájl tartalma
+	DB  *database.DB  // Az adatbázis kapcsolat
 
 	// A Listen() ami elindítja a konzolt az egy goroutine,
 	// ezt csak egyszer akarjuk elindítani
 	listenOnce sync.Once
+	// Ugyanaz az ötlet mint a Listen()-nel
+	// csak ebben az esetben a Shutdown()-ra értelmezve
+	shutdownOnce sync.Once
 
 	srv *http.Server // Az enkapszulált szerver
 
@@ -49,6 +60,12 @@ type AppServer struct {
 
 	// http template cache, hogy ne kelljen mindig újraolvasni
 	templateCache map[string]*template.Template
+
+	startTime time.Time
+
+	zipMutex       sync.Mutex
+	zipCache       map[string]*CachedArchive
+	zipCleanupOnce sync.Once
 }
 
 // Az *AppServer struktúra publikus konstruktora, alapvetően
@@ -65,11 +82,18 @@ func NewAppServer(cfg config.Config) *AppServer {
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	server := &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", cfg.BindAddress, *cfg.ServerPort),
+		Addr:         fmt.Sprintf("%s:%d", cfg.BindAddress, cfg.ServerPort),
 		Handler:      LoggingMiddleware(mux),
 		ReadTimeout:  time.Duration(cfg.ReadTimeout),
 		WriteTimeout: time.Duration(cfg.WriteTimeout),
 		IdleTimeout:  time.Duration(cfg.IdleTimeout),
+	}
+
+	dbInstance, err := database.InitDB(cfg.DBPath)
+	if err != nil {
+		log.Fatalf("Could not initialize database: %v", err)
+	} else {
+		LogDebug("Successfully connected to SQLite database.")
 	}
 
 	return &AppServer{
@@ -78,6 +102,8 @@ func NewAppServer(cfg config.Config) *AppServer {
 		srv:           server,
 		endpoints:     make(map[string]http.HandlerFunc),
 		templateCache: make(map[string]*template.Template),
+		zipCache:      make(map[string]*CachedArchive),
+		DB:            dbInstance,
 	}
 }
 
@@ -86,6 +112,7 @@ func NewAppServer(cfg config.Config) *AppServer {
 //
 // Példának lásd a serveIndex.go fájlt.
 func (srv *AppServer) RegisterRoute(route string, handler http.HandlerFunc) (err error) {
+
 	srv.coreMutex.Lock()
 	defer srv.coreMutex.Unlock()
 
@@ -124,7 +151,7 @@ func (srv *AppServer) GetRoutes() []Route {
 func (srv *AppServer) GetConfig() config.Config {
 	out := config.Config{
 		ConfigFilePath: srv.cfg.ConfigFilePath,
-		ServerPort:     copyPortPtr(srv.cfg.ServerPort),
+		ServerPort:     srv.cfg.ServerPort,
 		FilesDir:       srv.cfg.FilesDir,
 		DebugMode:      srv.cfg.DebugMode,
 		BindAddress:    srv.cfg.BindAddress,
@@ -133,18 +160,59 @@ func (srv *AppServer) GetConfig() config.Config {
 	return out
 }
 
+func (srv *AppServer) getArchive(filePath string) (*zip.ReadCloser, error) {
+	srv.zipMutex.Lock()
+	defer srv.zipMutex.Unlock()
+
+	if archive, exists := srv.zipCache[filePath]; exists {
+		archive.LastAccess = time.Now()
+		return archive.Reader, nil
+	}
+
+	zr, err := zip.OpenReader(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	srv.zipCache[filePath] = &CachedArchive{
+		Reader:     zr,
+		LastAccess: time.Now(),
+	}
+
+	return zr, nil
+}
+
+func (srv *AppServer) cleanupZipCache() {
+	for {
+		time.Sleep(2 * time.Minute)
+
+		srv.zipMutex.Lock()
+		for path, archive := range srv.zipCache {
+			if time.Since(archive.LastAccess) > 5*time.Minute {
+				archive.Reader.Close()
+				delete(srv.zipCache, path)
+				LogDebug("Closed inactive archive: " + path)
+			}
+		}
+		srv.zipMutex.Unlock()
+	}
+}
+
 // Elindítja a szervert, inicializálja a futamidőszámlálót,
 // kiírja az üdvözlő üzenetet a konzolra és egyéb információkat.
 //
 // Ezen felül elindítja a parancssort is amin keresztül lehet interaktálni a szerverrel.
 func (srv *AppServer) Start() {
 
-	initUptime()
+	initUptime(&srv.startTime)
+	srv.SetupDebug()
 
 	fmt.Println("MISATO - Manga Site")
-	fmt.Printf("\nBinding server to address %s on port %d...\n", srv.cfg.BindAddress, *srv.cfg.ServerPort)
+	if srv.cfg.DebugMode || srv.cfg.VerboseMode {
+		fmt.Printf("\nBinding server to address %s on port %d...\n", srv.cfg.BindAddress, srv.cfg.ServerPort)
 
-	fmt.Println("\nInitial scan...")
+		fmt.Println("\nInitial scan...")
+	}
 	srv.scan()
 
 	go func() {
@@ -154,8 +222,14 @@ func (srv *AppServer) Start() {
 		}
 	}()
 
+	srv.zipCleanupOnce.Do(func() {
+		go srv.cleanupZipCache()
+	})
+
 	srv.listenOnce.Do(func() {
-		fmt.Println("\nSetting up console listener...")
+		if srv.cfg.DebugMode || srv.cfg.VerboseMode {
+			fmt.Println("\nSetting up console listener...")
+		}
 		Listen(srv)
 	})
 }
@@ -163,17 +237,12 @@ func (srv *AppServer) Start() {
 // Leállítja a szervert, fontos, nem csak elvágja a kapcsolatot,
 // hanem megvárja míg minden folyamatban lévő tevékenység befejeződik
 func (srv *AppServer) Stop() {
-	srv.coreMutex.RLock()
-	serverInstance := srv.srv
-	srv.coreMutex.RUnlock()
-
-	if serverInstance != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := serverInstance.Shutdown(ctx); err != nil {
-			log.Printf("Server shutdown error: %v", err)
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.srv.Shutdown(ctx); err != nil {
+		log.Printf("Server shutdown error: %v", err)
 	}
+
 }
 
 // Lemásolja a régi konfigurációt, majd eldobja a régi szervert.
@@ -188,13 +257,16 @@ func (srv *AppServer) Restart() {
 	srv.Stop()
 	fmt.Println("Old server instance stopped.")
 
-	newCfg := config.SetupConfig(configFilePath, 0)
+	newCfg, err := config.SetupConfig(configFilePath, 0, false)
+	if err != nil {
+		log.Fatalf("Server couldn't read config after restart: %v", err)
+	}
 
 	srv.coreMutex.Lock()
 	srv.cfg = newCfg
 
 	srv.srv = &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", srv.cfg.BindAddress, *srv.cfg.ServerPort),
+		Addr:         fmt.Sprintf("%s:%d", srv.cfg.BindAddress, srv.cfg.ServerPort),
 		Handler:      LoggingMiddleware(srv.mux), // A régi mux-ot (és a regisztrált utakat) megtartjuk!
 		ReadTimeout:  time.Duration(srv.cfg.ReadTimeout),
 		WriteTimeout: time.Duration(srv.cfg.WriteTimeout),
@@ -202,9 +274,9 @@ func (srv *AppServer) Restart() {
 	}
 	srv.coreMutex.Unlock()
 
-	fmt.Printf("Restarting HTTP server on %s:%d...\n", srv.cfg.BindAddress, *srv.cfg.ServerPort)
+	fmt.Printf("Restarting HTTP server on %s:%d...\n", srv.cfg.BindAddress, srv.cfg.ServerPort)
 
-	initUptime()
+	initUptime(&srv.startTime)
 
 	go func() {
 		err := srv.srv.ListenAndServe()
@@ -215,4 +287,15 @@ func (srv *AppServer) Restart() {
 
 	fmt.Println("Restart complete!")
 
+}
+
+func (srv *AppServer) Shutdown() {
+	srv.shutdownOnce.Do(func() {
+		srv.Stop()
+		srv.DB.Conn.Close()
+
+		for _, archive := range srv.zipCache {
+			archive.Reader.Close()
+		}
+	})
 }

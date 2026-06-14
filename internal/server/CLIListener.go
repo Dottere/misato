@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"misato/config"
-	"misato/internal/memstat"
+	"misato/internal/config"
+	"misato/internal/utils"
 	"os"
 	"runtime"
 	"strings"
@@ -28,7 +28,8 @@ func Listen(srv *AppServer) {
 
 		if !scanner.Scan() {
 			fmt.Println("Program terminated (SIGINT)")
-			os.Exit(0)
+			srv.Shutdown()
+			break
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -40,11 +41,14 @@ func Listen(srv *AppServer) {
 
 		text = strings.TrimSpace(text)
 
-		handleSingleWordCommands(srv, cfg, text)
+		shouldTerminate := handleSingleWordCommands(srv, cfg, text)
+		if shouldTerminate {
+			break
+		}
 	}
 }
 
-func handleSingleWordCommands(srv *AppServer, cfg config.Config, cmd string) {
+func handleSingleWordCommands(srv *AppServer, cfg config.Config, cmd string) (terminate bool) {
 	switch cmd {
 	case "help":
 		fmt.Println(`
@@ -66,16 +70,16 @@ debug - Toggle debug mode
 gc - Force runtime garbage collection`)
 	case "exit", "stop":
 		fmt.Println("\nShutting down server...")
-		srv.Stop()
-		os.Exit(0)
+		srv.Shutdown()
+		return true
 	case "restart":
 		srv.Restart()
 	case "ip":
 		fmt.Printf("\nServer is bound to address %s\n", cfg.BindAddress)
 	case "port":
-		fmt.Printf("\nServer is bound to port %d\n", *cfg.ServerPort)
+		fmt.Printf("\nServer is bound to port %d\n", cfg.ServerPort)
 	case "uptime":
-		fmt.Printf("\n%s", getCurrentUptime())
+		fmt.Printf("\n%s", getCurrentUptime(&srv.startTime))
 	case "list":
 		fmt.Printf("\nStored comics:\n\n")
 		for idx, elem := range srv.getAllStoredComics() {
@@ -87,13 +91,13 @@ gc - Force runtime garbage collection`)
 		fmt.Println("\nInitiating rescan...")
 		srv.scan()
 	case "stats":
-		memstat.PrintStats()
+		utils.PrintMemoryStats()
 	case "ping":
 		fmt.Println("\npong!")
 	case "clear":
 		fmt.Print("\033[H\033[2J")
 	case "config":
-		fmt.Printf("\nServer port: %d\n", *cfg.ServerPort)
+		fmt.Printf("\nServer port: %d\n", cfg.ServerPort)
 		fmt.Printf("Library folder: %s\n", cfg.FilesDir)
 		fmt.Printf("Debug mode: %t\n", cfg.DebugMode)
 		fmt.Printf("Server IP: %s\n", cfg.BindAddress)
@@ -119,4 +123,5 @@ gc - Force runtime garbage collection`)
 	default:
 		fmt.Println("Unknown command:", cmd)
 	}
+	return false
 }
