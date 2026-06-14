@@ -43,8 +43,16 @@ func (srv *AppServer) getAllStoredComics() []ComicCard {
 
 	entries, err := os.ReadDir(folderPath)
 	if err != nil {
-		log.Println(err)
-		return nil
+		if srv.cfg.VerboseMode || srv.cfg.DebugMode {
+			log.Printf("Library folder doesn't exist, creating...")
+		}
+		err := os.Mkdir(folderPath, 0644)
+		if err != nil {
+			if srv.cfg.VerboseMode || srv.cfg.DebugMode {
+				log.Printf("Creating library folder failed: %v", err)
+			}
+			return nil
+		}
 	}
 
 	var storedComics []ComicCard
@@ -58,7 +66,7 @@ func (srv *AppServer) getAllStoredComics() []ComicCard {
 		filePath := filepath.Join(folderPath, entry.Name())
 
 		if srv.cfg.DebugMode || srv.cfg.VerboseMode {
-			fmt.Printf("\nScanning \"%s\"", comicName)
+			log.Printf("Scanning \"%s\"\n", comicName)
 		}
 		cbzFile, err := cbz.OpenCbz(filePath)
 		if err != nil {
@@ -77,8 +85,8 @@ func (srv *AppServer) getAllStoredComics() []ComicCard {
 		})
 	}
 	if srv.cfg.DebugMode || srv.cfg.VerboseMode {
-		fmt.Printf("\n\nScanning finished\n")
-		fmt.Printf("Scanned %d comics\n", len(storedComics))
+		log.Printf("Scanning finished\n")
+		log.Printf("Scanned %d comics\n", len(storedComics))
 	}
 	return storedComics
 }

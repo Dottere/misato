@@ -79,8 +79,8 @@ gc - Force runtime garbage collection`)
 	case "uptime":
 		fmt.Printf("\n%s", getCurrentUptime(&srv.startTime))
 	case "list":
-		fmt.Printf("\nStored comics:\n\n")
-		for idx, elem := range srv.getAllStoredComics() {
+		fmt.Printf("\nStored comics:\n")
+		for idx, elem := range srv.storedItems {
 			fmt.Printf("(%d) %s\n", idx+1, elem.Title)
 		}
 	case "count":
@@ -99,11 +99,14 @@ gc - Force runtime garbage collection`)
 		fmt.Print("\033[H\033[2J")
 	case "config":
 		cfg := srv.GetConfig()
-		fmt.Printf("\nServer port: %d\n", cfg.ServerPort)
-		fmt.Printf("Library folder: %s\n", cfg.FilesDir)
+		fmt.Printf("\nConfig file path: %s\n", cfg.ConfigFilePath)
+		fmt.Printf("Database path: %s\n", cfg.DBPath)
+		fmt.Printf("Verbose mode: %t\n", cfg.VerboseMode)
 		fmt.Printf("Debug mode: %t\n", cfg.DebugMode)
+		fmt.Printf("Allow guest access: %t\n", cfg.AllowGuestAccess)
 		fmt.Printf("Server IP: %s\n", cfg.BindAddress)
-		// A config package-be áthelyezett ConfigDuration formázása miatt ez egyszerűbb
+		fmt.Printf("Server port: %d\n", cfg.ServerPort)
+		fmt.Printf("Library folder: %s\n", cfg.FilesDir)
 		fmt.Printf("Read timeout: %s\n", time.Duration(cfg.ReadTimeout).String())
 		fmt.Printf("Write timeout: %s\n", time.Duration(cfg.WriteTimeout).String())
 		fmt.Printf("Idle Timeout: %s\n", time.Duration(cfg.IdleTimeout).String())

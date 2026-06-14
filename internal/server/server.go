@@ -137,15 +137,10 @@ func (srv *AppServer) GetRoutes() []Route {
 
 // GetConfig biztonságosan (másolatként) adja vissza a szerver aktuális beállításait.
 func (srv *AppServer) GetConfig() config.Config {
-	out := config.Config{
-		ConfigFilePath: srv.cfg.ConfigFilePath,
-		ServerPort:     srv.cfg.ServerPort,
-		FilesDir:       srv.cfg.FilesDir,
-		DebugMode:      srv.cfg.DebugMode,
-		BindAddress:    srv.cfg.BindAddress,
-	}
+	srv.coreMutex.RLock()
+	defer srv.coreMutex.RUnlock()
 
-	return out
+	return srv.cfg
 }
 
 // getArchive visszaad egy nyitott ZIP olvasót a kért fájlhoz.
@@ -200,9 +195,9 @@ func (srv *AppServer) Start() {
 
 	fmt.Println("MISATO - Manga Site")
 	if srv.cfg.DebugMode || srv.cfg.VerboseMode {
-		fmt.Printf("\nBinding server to address %s on port %d...\n", srv.cfg.BindAddress, srv.cfg.ServerPort)
+		log.Printf("Binding server to address %s on port %d...\n", srv.cfg.BindAddress, srv.cfg.ServerPort)
 
-		fmt.Println("\nInitial scan...")
+		log.Println("Initial scan...")
 	}
 	srv.scan()
 

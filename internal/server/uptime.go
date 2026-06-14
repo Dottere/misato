@@ -23,9 +23,9 @@ func getCurrentUptime(startTime *time.Time) string {
 	minutes := (duration % time.Hour) / time.Minute
 	seconds := (duration % time.Minute) / time.Second
 
-	// A Go beépített time.Format funkciója a "2005. July 01." referencia dátum
+	// A Go beépített time.Format funkciója a "2006. January 02." referencia dátum
 	// alapján mintaként formázza a mi startTime-unkat.
-	startStr := startTime.Format("2005. July 01.")
+	startStr := startTime.Format("2006. January 02.")
 	runningStr := fmt.Sprintf("%02dh %02dm %02ds", hours, minutes, seconds)
 
 	return fmt.Sprintf("Server started on %s\nRunning for %s", startStr, runningStr)

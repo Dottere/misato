@@ -8,7 +8,7 @@ import (
 	"misato/internal/utils"
 )
 
-const VERSION string = "0.5.0"
+const VERSION string = "0.5.1"
 
 var ConfigPath string
 
