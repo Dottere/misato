@@ -13,27 +13,19 @@ import (
 	"strings"
 )
 
-/*
-A könnyed indexeléshez használt struktúra ami eltárolja a legelső oldalt (ami alapvetően a nyitóoldal szokott lenni)
-és a manga címét (a zip fájl neve)
-*/
+// ComicCard egyetlen képregény (CBZ archívum) alapvető metaadatait tárolja a webes felület számára.
+// Tartalmazza a címet és a borítóképhez (általában a legelső oldalhoz) vezető API végpont URL-jét.
 type ComicCard struct {
 	Title    string
 	CoverURL string
 }
 
-/*
-A ComicCards típus önmagában nincs használva, csak tömbként, így ezzel aliasoljuk majd ehhez
-kötünk egy segédfüggvényt ami segít eldönteni, hogy egy manga indexelve van-e
-*/
+// ComicCards a ComicCard elemek egyedi típus-aliasza.
+// Segítségével egyedi metódusokat rendelhetünk a képregények listájához.
 type ComicCards []ComicCard
 
-/*
-A segédfüggvény amit a ComicCards típushoz kötünk.
-
-  - Igazat ad, hogyha bármelyik elem címe megegyezik a paraméterrel
-  - Hamist ad, hogyha nem talál egyezést
-*/
+// Contains leellenőrzi, hogy a megadott képregénycím (title) szerepel-e a memóriában tartott listában.
+// Gyors validációra szolgál az URL-ből érkező útvonalak ellenőrzésekor.
 func (c ComicCards) Contains(e string) bool {
 	for _, elem := range c {
 		if elem.Title == e {
@@ -43,7 +35,9 @@ func (c ComicCards) Contains(e string) bool {
 	return false
 }
 
-// Átnézi a mappát ahol a mangák tárolva vannak és indexeli őket
+// getAllStoredComics végigiterál a konfigurációban megadott könyvtáron, és feldolgozza a .cbz kiterjesztésű fájlokat.
+// Kinyeri a címeket és legenerálja a borítóképek API végpontjait. Ez a folyamat I/O intenzív,
+// ezért közvetlenül ritkán, főleg induláskor vagy manuális frissítéskor hívódik meg.
 func (srv *AppServer) getAllStoredComics() []ComicCard {
 	folderPath := srv.cfg.FilesDir
 
@@ -89,9 +83,9 @@ func (srv *AppServer) getAllStoredComics() []ComicCard {
 	return storedComics
 }
 
-/*
-Meghívja a getAllStoredComics függvényt majd szálbiztos módon felülírja a szerver storedItems példányát
-*/
+// scan egy szálbiztos (thread-safe) burkolófüggvény a getAllStoredComics köré.
+// Gondoskodik róla, hogy az új képregények beolvasása közben a webes kiszolgálás zavartalan maradjon,
+// majd a kész listát lecseréli a memóriában.
 func (srv *AppServer) scan() {
 	newItems := srv.getAllStoredComics()
 
@@ -102,12 +96,9 @@ func (srv *AppServer) scan() {
 	srv.cacheMutex.Unlock()
 }
 
-/*
-Kiszolgálja a mangakérelmeket, amik a comics.html oldalról "/mangas/manga_név" formátumú kérésekként érkeznek
-
-# Átadott paraméterek:
-  - Oldal címe: A manga neve
-*/
+// ServeFilesPage legenerálja és kiszolgálja az olvasó (reader) felületet egy konkrét képregényhez.
+// Beolvassa az adott CBZ fájl belső szerkezetét, és átadja a sablonnak az összes oldalhoz tartozó
+// API hivatkozást, hogy a böngésző dinamikusan betölthesse azokat.
 func (srv *AppServer) ServeFilesPage(w http.ResponseWriter, r *http.Request) {
 
 	rawComicName := r.PathValue("comicName")
@@ -153,14 +144,9 @@ func (srv *AppServer) ServeFilesPage(w http.ResponseWriter, r *http.Request) {
 	srv.renderTemplate(w, r, "reader.html", data)
 }
 
-/*
-Végigiterál az eltárolt mangákon és dinamikusan megjeleníti azokat az oldalon
-
-# Átadott paraméterek:
-  - Oldal címe: Comics — Misato
-  - Az eltárolt mangák: itemsToRender
-  - A mappa ahol a mangák tárolva vannak: srv.cfg.Filesdir (dinamikusan kiolvasott)
-*/
+// ServeBrowserPage kiszolgálja a fő könyvtárnézetet (catalog).
+// Szálbiztos módon kiolvassa a memóriában tartott képregénylistát, és átadja azt
+// a "comics.html" sablonnak a rácsos megjelenítéshez.
 func (srv *AppServer) ServeBrowserPage(w http.ResponseWriter, r *http.Request) {
 
 	srv.cacheMutex.RLock()
@@ -178,9 +164,9 @@ func (srv *AppServer) ServeBrowserPage(w http.ResponseWriter, r *http.Request) {
 
 }
 
-/*
-Megjeleníti az olvasót a kérelmezett mangával feltöltve
-*/
+// ServeComic egy dedikált API végpont, amely egy konkrét képet (oldalt) szolgál ki a tömörített CBZ archívumból.
+// A teljesítmény maximalizálása érdekében a memóriában tartott zipCache-t használja,
+// így elkerüli a fájlok másodpercenkénti többszöri megnyitását. Támogatja a PNG, WEBP és JPEG formátumokat.
 func (srv *AppServer) ServeComic(w http.ResponseWriter, r *http.Request) {
 	comicName := r.URL.Query().Get("comic")
 	indexStr := r.URL.Query().Get("index")
@@ -236,6 +222,8 @@ func (srv *AppServer) ServeComic(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, rc)
 }
 
+// Rescan egy POST végpont, amivel a kliens (vagy egy adminisztrátor) manuálisan kikényszerítheti
+// a fájlrendszer újraolvasását, anélkül, hogy a szervert újra kellene indítani.
 func (srv *AppServer) Rescan(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

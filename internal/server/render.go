@@ -7,10 +7,8 @@ import (
 	"path/filepath"
 )
 
-/*
-Azokat az adatokat tárolja amiket esetlegesen át kell adni a HTML templateknek a dinamikus
-megjelenítés érdekében.
-*/
+// PageData összefogja mindazokat a változókat és állapotokat, amelyeket a szerver
+// átad a HTML sablonoknak a dinamikus weboldalak legenerálásához.
 type PageData struct {
 	Title      string
 	ActivePage string
@@ -21,10 +19,10 @@ type PageData struct {
 	Username   string
 }
 
-/*
-Dinamikusan jeleníti meg az oldalakat a Go beépített html template-jeinek segítségével.
-Ezen felül ha a debug mód nincs bekapcsolva akkor cacheli a templateket (módosításkor nem olvasódnak be újraindításig)
-*/
+// renderTemplate feldolgozza és a http.ResponseWriter-be írja a megadott HTML sablont.
+// Teljesítményoptimalizálás céljából "Double-Checked Locking" módszerrel memóriában tartja
+// a már lefordított (parsed) fájlokat. Debug módban a gyorsítótár (cache) inaktív,
+// így a HTML fájlok módosításai azonnal, újraindítás nélkül látszódnak.
 func (srv *AppServer) renderTemplate(w http.ResponseWriter, _ *http.Request, name string, data PageData) {
 
 	base := filepath.Join("web", "templates", "base.html")
@@ -74,14 +72,14 @@ func (srv *AppServer) renderTemplate(w http.ResponseWriter, _ *http.Request, nam
 	buf.WriteTo(w)
 }
 
-// Sima oldalak betöltése (index és about mert ezek nem túl extrák) //
+// ==============================================================================
+// Sima oldalak betöltése (Alapvető, statikusabb nézetek)
+// ==============================================================================
 
-/*
-Betölti a kezdőoldalt ("/" elérési úton)
-
-# Átadott paraméterek:
-  - Oldal címe: Home — Misato
-*/
+// ServeMainPage a weboldal kezdőlapját (home) szolgálja ki.
+// Mivel a Go ServeMux a "/" útvonalra minden nem regisztrált kérést is ráirányít
+// (catch-all), ez a függvény szigorúan ellenőrzi, hogy pontosan a gyökérkönyvtárat
+// kérték-e. Ha nem, egy 404-es oldalra irányít.
 func (srv *AppServer) ServeMainPage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		srv.ServeNotFound(w, r)
@@ -94,12 +92,8 @@ func (srv *AppServer) ServeMainPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-/*
-Megjeleníti a "rólunk" oldalt ahol esetlegesen leírjuk mire való ez a projekt, stb
-
-# Átadott paraméterek:
-  - Oldal címe: About — Misato
-*/
+// ServeAboutPage a statikus "Rólunk" (About) oldalt jeleníti meg,
+// ahol a projekt célját és leírását olvashatják a látogatók.
 func (srv *AppServer) ServeAboutPage(w http.ResponseWriter, r *http.Request) {
 	srv.renderTemplate(w, r, "about.html", PageData{
 		Title:      "About — Misato",
@@ -107,7 +101,9 @@ func (srv *AppServer) ServeAboutPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// A sima 404 oldal helyett kiszolgál egy sajátot.
+// ServeNotFound lecseréli a Go beépített, egyszerű 404-es válaszát egy stílusában
+// az oldalhoz illeszkedő, egyedi "Not Found" HTML sablonra. Ezen felül gondoskodik
+// a megfelelő HTTP 404-es státuszkód beállításáról a fejlécben.
 func (srv *AppServer) ServeNotFound(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 

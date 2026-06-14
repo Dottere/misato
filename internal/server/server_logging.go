@@ -9,27 +9,25 @@ import (
 
 var debugMode bool
 
-/*
-A státuszkódok dinamikus tárolására használt struktúra ami valójában egy http.ResponseWriter
-*/
+// statusRecorder egy egyedi http.ResponseWriter burkoló (wrapper).
+// Célja, hogy elfogja és eltárolja a kliensnek visszaküldött HTTP státuszkódot
+// a naplózás számára, mivel az eredeti ResponseWriterből ezt nem lehet közvetlenül kiolvasni.
 type statusRecorder struct {
 	http.ResponseWriter
 	statusCode int
 }
 
-/*
-A http.ResponseWriter.WriteHeader megvalósítása a saját típusunkra ami eltárolja a státuszkódot is ezzel
-dinamikussá és sokkal könnyebbé téve a logolást
-*/
+// WriteHeader felülírja a http.ResponseWriter alapértelmezett metódusát.
+// Eltárolja a kiküldött státuszkódot (pl. 200, 404) a struktúrában,
+// mielőtt továbbadná azt a tényleges kliensnek.
 func (rec *statusRecorder) WriteHeader(code int) {
 	rec.statusCode = code
 	rec.ResponseWriter.WriteHeader(code)
 }
 
-/*
-Ez egy olyan köztes állapot a mux számára ami feljegyzi a státuszkódot és kilogolja azt
-a konzolra
-*/
+// LoggingMiddleware egy HTTP köztesréteg (middleware), amely minden beérkező kérést
+// átenged a megadott http.Handler-en, miközben méri és naplózza a válasz kimenetelét.
+// A státuszkód alapértelmezett értéke 200 (OK), ha a kiszolgáló explicit nem állít be mást.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -44,14 +42,8 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-/*
-Kiírja stdout-ra, hogy a beérkezett kérésre milyen válasz lett kiküldve, miféle kérés volt az, és hogy mi lett kérve, illetve
-honnan lett kérve
-
-Például:
-
-	[200] OK | GET - mangas/testComic (127.0.0.1)
-*/
+// logRequestToCLI a megadott formátumban a standard kimenetre (stdout) írja a befejezett kérés metaadatait.
+// Példa kimenet: [200] OK | GET - /api/image (127.0.0.1)
 func logRequestToCLI(r *http.Request, statusCode int) {
 
 	request_ip, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -75,10 +67,14 @@ func logRequestToCLI(r *http.Request, statusCode int) {
 	}
 }
 
+// SetupDebug beállítja a csomagszintű (package-level) debugMode változót
+// az AppServer konfigurációja alapján.
 func (srv *AppServer) SetupDebug() {
 	debugMode = srv.cfg.DebugMode
 }
 
+// LogDebug egy globális segédfüggvény, amely biztonságosan (feltételhez kötve)
+// naplóz a standard log kimenetre, de csak akkor, ha a fejlesztői (debug) mód aktív.
 func LogDebug(message string) {
 	if !debugMode {
 		return

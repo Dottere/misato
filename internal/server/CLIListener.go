@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"misato/internal/config"
 	"misato/internal/utils"
 	"os"
 	"runtime"
@@ -12,12 +11,11 @@ import (
 	"time"
 )
 
-/*
-Megnyitja a konzolt amin keresztül lehet vezérelni a szervert parancsok segítségével
-*/
+// Listen elindít egy interaktív parancssori (CLI) felületet a standard bemeneten (stdin).
+// Lehetővé teszi az adminisztrátor számára a szerver valós idejű vezérlését,
+// a memóriastatisztikák lekérdezését és a manuális leállítást.
+// Mivel blokkoló (végtelen ciklusban fut), dedikált goroutine-ban kell elindítani.
 func Listen(srv *AppServer) {
-
-	cfg := srv.cfg
 
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -37,18 +35,18 @@ func Listen(srv *AppServer) {
 			return
 		}
 
-		text := scanner.Text()
+		text := strings.TrimSpace(scanner.Text())
 
-		text = strings.TrimSpace(text)
-
-		shouldTerminate := handleSingleWordCommands(srv, cfg, text)
+		shouldTerminate := handleSingleWordCommands(srv, text)
 		if shouldTerminate {
 			break
 		}
 	}
 }
 
-func handleSingleWordCommands(srv *AppServer, cfg config.Config, cmd string) (terminate bool) {
+// handleSingleWordCommands végzi a beérkezett parancssori utasítások értelmezését és végrehajtását.
+// Visszatérési értéke (terminate) jelzi a hívó számára, ha a felhasználó a leállítás (exit/stop) mellett döntött.
+func handleSingleWordCommands(srv *AppServer, cmd string) (terminate bool) {
 	switch cmd {
 	case "help":
 		fmt.Println(`
@@ -75,9 +73,9 @@ gc - Force runtime garbage collection`)
 	case "restart":
 		srv.Restart()
 	case "ip":
-		fmt.Printf("\nServer is bound to address %s\n", cfg.BindAddress)
+		fmt.Printf("\nServer is bound to address %s\n", srv.GetConfig().BindAddress)
 	case "port":
-		fmt.Printf("\nServer is bound to port %d\n", cfg.ServerPort)
+		fmt.Printf("\nServer is bound to port %d\n", srv.GetConfig().ServerPort)
 	case "uptime":
 		fmt.Printf("\n%s", getCurrentUptime(&srv.startTime))
 	case "list":
@@ -86,7 +84,10 @@ gc - Force runtime garbage collection`)
 			fmt.Printf("(%d) %s\n", idx+1, elem.Title)
 		}
 	case "count":
-		fmt.Printf("\nLoaded comics: (%d)\n", len(srv.storedItems))
+		srv.cacheMutex.RLock()
+		count := len(srv.storedItems)
+		srv.cacheMutex.RUnlock()
+		fmt.Printf("\nLoaded comics: (%d)\n", count)
 	case "rescan":
 		fmt.Println("\nInitiating rescan...")
 		srv.scan()
@@ -97,10 +98,12 @@ gc - Force runtime garbage collection`)
 	case "clear":
 		fmt.Print("\033[H\033[2J")
 	case "config":
+		cfg := srv.GetConfig()
 		fmt.Printf("\nServer port: %d\n", cfg.ServerPort)
 		fmt.Printf("Library folder: %s\n", cfg.FilesDir)
 		fmt.Printf("Debug mode: %t\n", cfg.DebugMode)
 		fmt.Printf("Server IP: %s\n", cfg.BindAddress)
+		// A config package-be áthelyezett ConfigDuration formázása miatt ez egyszerűbb
 		fmt.Printf("Read timeout: %s\n", time.Duration(cfg.ReadTimeout).String())
 		fmt.Printf("Write timeout: %s\n", time.Duration(cfg.WriteTimeout).String())
 		fmt.Printf("Idle Timeout: %s\n", time.Duration(cfg.IdleTimeout).String())

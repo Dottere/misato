@@ -16,63 +16,54 @@ import (
 
 var ErrRouteExists = errors.New("route already exists!")
 
+// CachedArchive egy memóriában tartott ZIP fájlolvasót és az utolsó hozzáférés idejét tárolja.
+// Célja, hogy a folyamatos I/O műveletek minimalizálásával gyorsítsa a képregények olvasását.
 type CachedArchive struct {
 	Reader     *zip.ReadCloser
 	LastAccess time.Time
 }
 
-// Enkapszulálja az alap http.Server struktúrát egy
-// saját implementációba ami tárolja a projektspecifikus
-// változókat pl.: config, mutexek, saját ServeMux, végpontok, indexelt mangák, cachelt templatek
+// AppServer a Misato alkalmazás központi szerver struktúrája.
+// Összefogja a HTTP szervert, a routert (ServeMux), az adatbázis kapcsolatot,
+// a konfigurációt és a szálbiztos gyorsítótárakat (sablonok, fájlok).
 type AppServer struct {
-	// A közös állapotokat írni és olvasni kell, ezért kell a mutex
-	//
-	// # Használva van:
-	//
-	// 	- Új utak regisztrálásakor
-	// 	- Regisztrált utak olvasásakor
-	//  - Leállításkor
+	// coreMutex védi a regisztrált végpontok (endpoints) és a konfiguráció olvasását/írását,
+	// különösen az alkalmazás hot-restart folyamata alatt.
 	coreMutex sync.RWMutex
 
-	cfg config.Config // A config fájl tartalma
-	DB  *database.DB  // Az adatbázis kapcsolat
+	cfg config.Config // Az alkalmazás betöltött konfigurációja
+	DB  *database.DB  // Az SQLite adatbázis aktív kapcsolata
 
-	// A Listen() ami elindítja a konzolt az egy goroutine,
-	// ezt csak egyszer akarjuk elindítani
-	listenOnce sync.Once
-	// Ugyanaz az ötlet mint a Listen()-nel
-	// csak ebben az esetben a Shutdown()-ra értelmezve
-	shutdownOnce sync.Once
+	// Szinkronizációs primitívek, amik garantálják, hogy az adott logikák (konzol, leállás, takarítás)
+	// az alkalmazás életciklusa alatt szigorúan csak egyszer fussanak le.
+	listenOnce     sync.Once
+	shutdownOnce   sync.Once
+	zipCleanupOnce sync.Once
 
-	srv *http.Server // Az enkapszulált szerver
+	srv *http.Server   // A beépített Go HTTP szerver példánya
+	mux *http.ServeMux // Az egyedi router, ami az útvonalakat (route) kezeli
 
-	mux *http.ServeMux // Privát router
-
-	// Egy map ami tárolja hogy melyik elérési utat milyen függvénnyel
-	// kell kiszolgálni
+	// endpoints tárolja a regisztrált végpontokat a duplikációk elkerülése végett.
 	endpoints map[string]http.HandlerFunc
 
-	// A mangákat tároló könyvtár olvasásához/írásához külön mutex
-	cacheMutex sync.RWMutex
-
-	// Az eltárolt mangák itt vannak cachelve és indexelve
+	// cacheMutex védi a lemezről beolvasott és indexelt mangák listáját (storedItems).
+	cacheMutex  sync.RWMutex
 	storedItems ComicCards
 
-	// http template cache, hogy ne kelljen mindig újraolvasni
+	// templateCache a lefordított HTML sablonokat tárolja, elkerülve a folyamatos lemezolvasást.
 	templateCache map[string]*template.Template
 
+	// startTime a szerver legutóbbi indulásának (vagy újraindulásának) pontos ideje az uptime számításhoz.
 	startTime time.Time
 
-	zipMutex       sync.Mutex
-	zipCache       map[string]*CachedArchive
-	zipCleanupOnce sync.Once
+	// zipMutex védi a megnyitott képregények memóriatárát (zipCache).
+	zipMutex sync.Mutex
+	zipCache map[string]*CachedArchive
 }
 
-// Az *AppServer struktúra publikus konstruktora, alapvetően
-// csak ezzel lehet (kell) egy újat létrehozni belőle.
-//
-// A bekért cfg-t a config.Config-ban található LoadConfig(path string)
-// függvénnyel lehet lekérni.
+// NewAppServer inicializálja és alapértékekkel tölti fel az AppServer egy új példányát.
+// Felépíti az adatbázis kapcsolatot, beállítja a statikus fájlok kiszolgálását,
+// és betölti az alapvető időtúllépési (timeout) szabályokat.
 func NewAppServer(cfg config.Config) *AppServer {
 
 	mux := http.NewServeMux()
@@ -107,10 +98,8 @@ func NewAppServer(cfg config.Config) *AppServer {
 	}
 }
 
-// Regisztrál egy utat a szerverre, bekéri a mintát ami lehet pl "/"
-// és a http.HandlerFunc formátumú függvényt ami kiszolgálja azt.
-//
-// Példának lásd a serveIndex.go fájlt.
+// RegisterRoute biztonságosan rögzít egy új végpontot a szerveren.
+// Ha a megadott útvonal minta (pl. "/api/rescan") már létezik, ErrRouteExists hibát dob.
 func (srv *AppServer) RegisterRoute(route string, handler http.HandlerFunc) (err error) {
 
 	srv.coreMutex.Lock()
@@ -126,13 +115,12 @@ func (srv *AppServer) RegisterRoute(route string, handler http.HandlerFunc) (err
 	return nil
 }
 
+// Route egy regisztrált végpont mintáját reprezentálja.
 type Route struct {
 	Pattern string
 }
 
-// Lekéri a regisztrált utakat és visszaadja azt egy olyan tömbben
-// ami jelenleg csak az utak mintáját (pl "/") tárolja, viszont ez
-// változhat a jövőben ha szükség van másra.
+// GetRoutes visszaadja az alkalmazásban jelenleg regisztrált összes elérési utat.
 func (srv *AppServer) GetRoutes() []Route {
 	out := make([]Route, 0, len(srv.endpoints))
 
@@ -147,7 +135,7 @@ func (srv *AppServer) GetRoutes() []Route {
 	return out
 }
 
-// Visszaadja a szerverben eltárolt konfigurációt
+// GetConfig biztonságosan (másolatként) adja vissza a szerver aktuális beállításait.
 func (srv *AppServer) GetConfig() config.Config {
 	out := config.Config{
 		ConfigFilePath: srv.cfg.ConfigFilePath,
@@ -160,6 +148,9 @@ func (srv *AppServer) GetConfig() config.Config {
 	return out
 }
 
+// getArchive visszaad egy nyitott ZIP olvasót a kért fájlhoz.
+// Ha a fájl már nyitva van a gyorsítótárban, frissíti az utolsó hozzáférés idejét,
+// ha pedig nincs, megnyitja és regisztrálja a memóriában.
 func (srv *AppServer) getArchive(filePath string) (*zip.ReadCloser, error) {
 	srv.zipMutex.Lock()
 	defer srv.zipMutex.Unlock()
@@ -182,6 +173,8 @@ func (srv *AppServer) getArchive(filePath string) (*zip.ReadCloser, error) {
 	return zr, nil
 }
 
+// cleanupZipCache egy háttérfolyamat, ami rendszeres időközönként felszabadítja az erőforrásokat.
+// Lezárja és törli a memóriából azokat a ZIP fájlokat, amiket egy meghatározott ideje (5 perc) nem olvastak.
 func (srv *AppServer) cleanupZipCache() {
 	for {
 		time.Sleep(2 * time.Minute)
@@ -198,10 +191,8 @@ func (srv *AppServer) cleanupZipCache() {
 	}
 }
 
-// Elindítja a szervert, inicializálja a futamidőszámlálót,
-// kiírja az üdvözlő üzenetet a konzolra és egyéb információkat.
-//
-// Ezen felül elindítja a parancssort is amin keresztül lehet interaktálni a szerverrel.
+// Start elindítja a HTTP szervert, végrehajtja a kezdő könyvtárszkennelést,
+// inicializálja az uptime számlálót, és beindítja a háttérfolyamatokat (pl. zip takarító, parancssor).
 func (srv *AppServer) Start() {
 
 	initUptime(&srv.startTime)
@@ -234,8 +225,8 @@ func (srv *AppServer) Start() {
 	})
 }
 
-// Leállítja a szervert, fontos, nem csak elvágja a kapcsolatot,
-// hanem megvárja míg minden folyamatban lévő tevékenység befejeződik
+// Stop elindítja a HTTP szerver finom (graceful) leállítását.
+// Nem szakítja meg azonnal a futó kéréseket, de maximum 5 másodpercet ad a befejezésükre.
 func (srv *AppServer) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -245,10 +236,9 @@ func (srv *AppServer) Stop() {
 
 }
 
-// Lemásolja a régi konfigurációt, majd eldobja a régi szervert.
-// Az új szerverben mindent újonnan inicializál kivéve a régi muxot, azt megtartja
-// a regisztrált elérési utak megtartása érdekében. Ha ezzel végzett, akkor elindítja az új szervert
-// és új uptime időzítőt is indít.
+// Restart hot-restartolja az alkalmazást: leállítja az aktív http modult,
+// újraolvassa a friss konfigurációt a lemezről, majd elindít egy új http szerver példányt.
+// Fontos: a korábban regisztrált útvonalak (mux) és az aktív gyorsítótárak érintetlenek maradnak.
 func (srv *AppServer) Restart() {
 	fmt.Println("Initiating server restart...")
 
@@ -289,11 +279,15 @@ func (srv *AppServer) Restart() {
 
 }
 
+// Shutdown véglegesen leállítja az alkalmazást: bontja a hálózati kapcsolatokat,
+// lezárja az adatbázist, és felszabadítja az összes nyitva maradt fájlleírót (file descriptor) a gyorsítótárból.
 func (srv *AppServer) Shutdown() {
 	srv.shutdownOnce.Do(func() {
 		srv.Stop()
 		srv.DB.Conn.Close()
 
+		srv.zipMutex.Lock()
+		defer srv.zipMutex.Unlock()
 		for _, archive := range srv.zipCache {
 			archive.Reader.Close()
 		}
