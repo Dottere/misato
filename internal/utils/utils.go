@@ -7,18 +7,6 @@ import (
 	"runtime"
 )
 
-/*
-A port pointerként van eltárolva, így csekkoljuk le, hogy létezik-e. Ez a függvény annak a másolását segíti elő,
-hogy mindenképpen értékként legyen átadva és ne mutatóként.
-*/
-func CopyPortPtr(v *int) *int {
-	if v == nil {
-		return nil
-	}
-	x := *v
-	return &x
-}
-
 func ParseFlags(VERSION string) (string, int, bool) {
 	var showVersion bool
 	var configFilePath string
